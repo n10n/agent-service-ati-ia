@@ -20,3 +20,14 @@ abstract class ConsensusMessage(
   override val sessionId : String,
   override val correlationId : String
 ) extends ProtocolMessage with SessionMsgStr
+
+
+object ConsensusMessage {
+  def toLabel(): CnxnCtxtLabel[String, String, String] = {
+    "protocolMessage(subchannel(sessionId(_)),_)".toLabel
+  }
+
+  def toLabel(sessionId: String): CnxnCtxtLabel[String, String, String] = {
+    s"""protocolMessage(subchannel(sessionId(\"$sessionId\")),_)""".toLabel
+  }
+}

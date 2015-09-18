@@ -8,6 +8,8 @@
 
 package com.synereo.casper.protocol
 
+import com.synereo.casper.protocol.msgs._
+import com.synereo.casper._
 import com.protegra_ati.agentservices.protocols._
 
 import com.biosimilarity.evaluator.distribution.{PortableAgentCnxn, PortableAgentBiCnxn}
@@ -54,5 +56,78 @@ trait ValidatorT extends ProtocolBehaviorT with Serializable {
   def doValidation(
     node: Being.AgentKVDBNode[PersistedKVDBNodeRequest, PersistedKVDBNodeResponse],
     cnxns: Seq[PortableAgentCnxn]
-  ): Unit
+  ): Unit = {
+    cnxns match {
+      case validatorCnxn :: clientCnxn :: Nil => {
+	val validatorCnxnRd =
+          acT.AgentCnxn(
+	    validatorCnxn.src, validatorCnxn.label, validatorCnxn.trgt
+	  )
+        val validatorCnxnWr =
+          acT.AgentCnxn(
+	    validatorCnxn.trgt, validatorCnxn.label, validatorCnxn.src
+	  )
+	val clientCnxnRd =
+          acT.AgentCnxn(
+	    clientCnxn.src, clientCnxn.label, clientCnxn.trgt
+	  )
+        val clientCnxnWr =
+          acT.AgentCnxn(
+	    clientCnxn.trgt, clientCnxn.label, clientCnxn.src
+	  )
+
+	reset {
+	  for( eValidationTxn <- node.subscribe( validatorCnxnRd )( ConsensusMessage.toLabel ) ){
+	    rsrc2V[ConsensusMessage]( eValidationTxn ) match {
+	      case Left( vTxn ) => {
+		vTxn match {
+		  case BlockMsg( _, _, _ ) => {
+		  }
+		  case BondMsg( _, _, _ ) => {
+		  }
+		  case EvidenceMsg( _, _, _ ) => {
+		  }
+		  case TxnMsg( _, _, _ ) => {
+		  }
+		  case UnbondMsg( _, _, _ ) => {
+		  }
+		  case ValidationMsg( _, _, _ ) => {
+		  }
+		}
+	      }
+	      case Right( true ) => {
+	      }
+	      case _ => {
+	      }
+	    }
+	  }
+	}
+	
+	reset {
+	  for( eClientTxn <- node.subscribe( clientCnxnRd )( ConsensusMessage.toLabel ) ){
+	    rsrc2V[ConsensusMessage]( eClientTxn ) match {
+	      case Left( vTxn ) => {
+		vTxn match {		  
+		  case BondMsg( _, _, _ ) => {
+		  }
+		  case EvidenceMsg( _, _, _ ) => {
+		  }
+		  case TxnMsg( _, _, _ ) => {
+		  }
+		}
+	      }
+	      case Right( true ) => {
+	      }
+	      case _ => {
+	      }
+	    }
+	  }
+	}
+      }
+      case _ => {
+	throw new Exception( "two cnxns expected : " + cnxns )
+      }
+    }    
+  }    
 }
+

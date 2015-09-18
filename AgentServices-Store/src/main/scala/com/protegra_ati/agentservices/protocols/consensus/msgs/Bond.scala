@@ -14,22 +14,22 @@ import com.biosimilarity.evaluator.distribution.PortableAgentCnxn
 import com.biosimilarity.lift.model.store.CnxnCtxtLabel
 import com.protegra_ati.agentservices.store.extensions.StringExtensions._
 
-case class Bond[Address,Data,Hash,Signature](
+case class BondMsg[Address,Data,Hash,Signature](
   override val sessionId : String,
   override val correlationId : String,
   val bond : BondT[Address,Data,Hash,Signature]
 ) extends ConsensusMessage( sessionId, correlationId ) {
   override def toLabel : CnxnCtxtLabel[String,String,String] = {
-    Bond.toLabel( sessionId )
+    BondMsg.toLabel( sessionId )
   }
 }
 
-object Bond {
+object BondMsg {
   def toLabel(): CnxnCtxtLabel[String, String, String] = {
-    "protocolMessage(bond(sessionId(_)))".toLabel
+    "protocolMessage(subchannel(sessionId(_)),bond(_))".toLabel
   }
 
   def toLabel(sessionId: String): CnxnCtxtLabel[String, String, String] = {
-    s"""protocolMessage(bond(sessionId(\"$sessionId\")))""".toLabel
+    s"""protocolMessage(subchannel(sessionId(\"$sessionId\")),bond(_))""".toLabel
   }
 }
