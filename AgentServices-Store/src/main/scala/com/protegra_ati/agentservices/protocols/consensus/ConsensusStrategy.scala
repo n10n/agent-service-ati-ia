@@ -95,16 +95,22 @@ with SignatureOpsT[Address,Data,Tuple2[Hash,Hash],Signature] with Serializable {
 		vTxn match {
 		  case BlockMsg( sid, _, blk : BlockT[Address,Data,Hash,Signature] ) => {
 		    val vldtr = validator[String,Address,Data,Hash,Signature,AppState,Timer]( sid )
-		    val cmgt = cmgtState( sid )
-		    if (
-		      isValidSignature[Address](
-			vldtr.hash[UnsignedBlockT[Address,Data,Hash,Signature]](
-			  blk.unsignedBlock
-			),
-			blk.signature,
-			blk.proposer
+		    val cmgt = cmgtState[String,Address,Data,Hash,Signature]( sid )
+		    val blkHash =
+		      vldtr.hash[UnsignedBlockT[Address,Data,Hash,Signature]](
+			blk.unsignedBlock
 		      )
+		    if (
+		      isValidSignature[Address]( blkHash, blk.signature, blk.proposer )
 		    ) {
+		      cmgt.blockHashMap.get( blkHash._1 ) match {
+			case Some( blk ) => {
+			  // do nothing
+			}
+			case None => {
+			  
+			}
+		      }
 		    }
 		    else {
 		    }

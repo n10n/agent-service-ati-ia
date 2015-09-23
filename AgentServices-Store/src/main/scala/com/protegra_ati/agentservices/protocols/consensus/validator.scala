@@ -307,7 +307,7 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
       txn match {
         case Ghost( _, cd, _ ) => {
           cd match {
-            case blk@Block( h, _, _, _, _, _, _, _, _, _ ) => {
+            case blk@Block( h, _, _, _, _, _, _, _, _, _, _ ) => {
               //throw new Exception( "tbd" )
               ( blockValidityRecord.get( hash( blk ) ), ( h < height ) ) match {
                 case ( Some( true ), true ) => {

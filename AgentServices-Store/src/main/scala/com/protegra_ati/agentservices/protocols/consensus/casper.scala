@@ -34,6 +34,7 @@ case class Bet[Address,Hash](
 trait ConsensusDataT[Address,Data,Hash,Signature]
 trait UnsignedBlockT[Address,Data,Hash,Signature] extends ConsensusDataT[Address,Data,Hash,Signature] {
   def height : Int
+  def previousBlockHash : Hash
   def timeStamp : Date
   def ghostEntries : Seq[EntryT[Address,Data,Hash,Signature]]
   def feeDistribution : Option[FeeDistributionT[Address,Data,Hash,Signature]]
@@ -74,6 +75,7 @@ case class Evidence[Address,Data,Hash,Signature](
 
 case class UnsignedBlock[Address,Data,Hash,Signature](
   override val height : Int,
+  override val previousBlockHash : Hash,
   override val timeStamp : Date,
   override val ghostEntries : Seq[EntryT[Address,Data,Hash,Signature]],
   override val feeDistribution : Option[FeeDistributionT[Address,Data,Hash,Signature]],
@@ -89,6 +91,7 @@ class Block[Address,Data,Hash,Signature](
   override val signature : Signature
 ) extends BlockT[Address,Data,Hash,Signature] {
   override def height : Int = unsignedBlock.height
+  override def previousBlockHash : Hash = unsignedBlock.previousBlockHash
   override def timeStamp : Date = unsignedBlock.timeStamp
   override def ghostEntries : Seq[EntryT[Address,Data,Hash,Signature]]
   =
@@ -107,6 +110,7 @@ class Block[Address,Data,Hash,Signature](
 object Block {
   def apply[Address,Data,Hash,Signature](
     height : Int,
+    previousBlockHash : Hash,
     timeStamp : Date,
     ghostEntries : Seq[EntryT[Address,Data,Hash,Signature]],
     feeDistribution : Option[FeeDistributionT[Address,Data,Hash,Signature]],
@@ -120,6 +124,7 @@ object Block {
     new Block(
       new UnsignedBlock( 
 	height,
+	previousBlockHash,
 	timeStamp,
 	ghostEntries,
 	feeDistribution,
@@ -134,7 +139,7 @@ object Block {
   def unapply[Address,Data,Hash,Signature](
     block : Block[Address,Data,Hash,Signature] 
   ) : Option[
-    ( Int, Date, Seq[EntryT[Address,Data,Hash,Signature]],
+    ( Int, Hash, Date, Seq[EntryT[Address,Data,Hash,Signature]],
       Option[FeeDistributionT[Address,Data,Hash,Signature]],
       Option[PruneGhostTableT[Address,Data,Hash,Signature]],
       Seq[BondStatusT[Address,Data,Hash,Signature] with EntryT[Address,Data,Hash,Signature]],
@@ -144,6 +149,7 @@ object Block {
     Some(
       (
 	block.unsignedBlock.height,
+	block.unsignedBlock.previousBlockHash,
 	block.unsignedBlock.timeStamp,
 	block.unsignedBlock.ghostEntries,
 	block.unsignedBlock.feeDistribution,
