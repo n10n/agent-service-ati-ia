@@ -49,6 +49,13 @@ trait BlockT[Address,Data,Hash,Signature] extends UnsignedBlockT[Address,Data,Ha
   def signature : Signature
 }
 
+trait BlockStatusT[Address,Data,Hash,Signature] {
+  def block : BlockT[Address,Data,Hash,Signature]
+  def validationStatus : Option[Boolean]
+  def haveDependencies : Option[Boolean]
+  def timeStamp : Date
+}
+
 trait ValidationT[Address,Data,Hash,Signature]
      extends ConsensusDataT[Address,Data,Hash,Signature]
 {
@@ -163,6 +170,13 @@ object Block {
     )
   }
 }
+
+case class BlockStatus[Address,Data,Hash,Signature](
+  override val block : BlockT[Address,Data,Hash,Signature],
+  override val validationStatus : Option[Boolean],
+  override val haveDependencies : Option[Boolean],
+  override val timeStamp : Date
+) extends BlockStatusT[Address,Data,Hash,Signature]
 
 trait EntryT[Address,Data,Hash,Signature] {
   def prev : Hash

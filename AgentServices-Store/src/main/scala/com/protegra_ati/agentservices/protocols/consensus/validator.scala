@@ -128,6 +128,13 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
       )
     ( ( committedBonds / totalBonds ) >= cmgtState.finalityThreshold )
   }
+
+  def haveBlockDependencies( 
+    cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
+    blk : BlockT[Address,Data,Hash,Signature]
+  ) : Boolean = {
+    throw new Exception( "Not yet implemented" ) 
+  }
   def timeFromGhostTable(
     cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature]
   ) : Date
@@ -337,7 +344,7 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
                 case ( None, true ) => {
                   val validBlkp = valid( blk )
                   blockValidityRecord += ( hash( blk ) -> validBlkp )
-		  state.blockHashMap += ( hash( blk ) -> blk )
+		  state.blockHashMap += ( hash( blk ) -> BlockStatus( blk, None, None, new Date() ) )
                   if ( validBlkp ) {
                     val nGT = 
                       (
@@ -415,7 +422,8 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
 				// blockHashMap then it should be in
 				// ghostTable. This is an invariant
 				// that we wish to maintain / check.
-				case Some( blk ) => {
+				case Some( blkStat ) => {
+				  val blk = blkStat.block
 				  acc.get( betHeight ) match {
 				    case Some( blkBetMap ) => {
 				      blkBetMap + ( blk -> ( blkBetMap.getOrElse( blk, Nil ) ++ List( bet ) ) )

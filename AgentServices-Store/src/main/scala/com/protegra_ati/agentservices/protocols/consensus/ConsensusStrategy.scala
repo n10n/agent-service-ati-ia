@@ -18,24 +18,26 @@ import com.biosimilarity.evaluator.distribution.ConcreteHL.PostedExpr
 import com.protegra_ati.agentservices.protocols.msgs._
 import com.biosimilarity.lift.model.store.CnxnCtxtLabel
 import com.biosimilarity.lift.lib._
+import scala.collection.mutable.Map
 import scala.util.continuations._
+import java.util.Date
 import java.util.UUID
 
-trait ValidatorBehaviorT[Address,Data,Hash,Signature,AppState,Timer] extends ProtocolBehaviorT
-with SignatureOpsT[Address,Data,Tuple2[Hash,Hash],Signature] with Serializable {
+trait ValidatorBehaviorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signature,AppState,Timer] extends ProtocolBehaviorT
+with SignatureOpsT[Address,Data,Hash,Signature] with Serializable {
   import com.biosimilarity.evaluator.distribution.utilities.DieselValueTrampoline._
   import com.protegra_ati.agentservices.store.extensions.StringExtensions._
 
-  def validator[Session,Address,Data,Hash,Signature,AppState,Timer](
+  def validator[Session](
     sessionId : Session
-  ) : ValidatorT[Address,Data,Hash,Tuple2[Hash,Hash],Signature,AppState,Timer]
+  ) : ValidatorT[Address,Data,PrimHash,Hash,Signature,AppState,Timer]
     = sessionMap( sessionId )._1
-  def cmgtState[Session,Address,Data,Hash,Signature](
+  def cmgtState[Session](
     sessionId : Session
   ) : ConsensusManagerStateT[Address,Data,Hash,Signature] = 
     sessionMap( sessionId )._2
 
-  def sessionMap[Session,Address,Data,Hash,Signature,AppState,Timer] : Map[Session,(ValidatorT[Address,Data,Hash,Tuple2[Hash,Hash],Signature,AppState,Timer],ConsensusManagerStateT[Address,Data,Hash,Signature])] 
+  def sessionMap[Session] : Map[Session,(ValidatorT[Address,Data,PrimHash,Hash,Signature,AppState,Timer],ConsensusManagerStateT[Address,Data,Hash,Signature])] 
 
   def run(
     node : Being.AgentKVDBNode[PersistedKVDBNodeRequest, PersistedKVDBNodeResponse],
@@ -94,8 +96,9 @@ with SignatureOpsT[Address,Data,Tuple2[Hash,Hash],Signature] with Serializable {
 	      case Left( vTxn ) => {
 		vTxn match {
 		  case BlockMsg( sid, _, blk : BlockT[Address,Data,Hash,Signature] ) => {
-		    val vldtr = validator[String,Address,Data,Hash,Signature,AppState,Timer]( sid )
-		    val cmgt = cmgtState[String,Address,Data,Hash,Signature]( sid )
+		    val vldtr = validator[String]( sid )
+		    val cmgtS : ConsensusManagerStateT[Address,Data,Hash,Signature] =
+		      cmgtState[String]( sid )
 		    val blkHash =
 		      vldtr.hash[UnsignedBlockT[Address,Data,Hash,Signature]](
 			blk.unsignedBlock
@@ -103,12 +106,38 @@ with SignatureOpsT[Address,Data,Tuple2[Hash,Hash],Signature] with Serializable {
 		    if (
 		      isValidSignature[Address]( blkHash, blk.signature, blk.proposer )
 		    ) {
-		      cmgt.blockHashMap.get( blkHash._1 ) match {
-			case Some( blk ) => {
+		      cmgtS.blockHashMap.get( blkHash ) match {
+			case Some( _ ) => {
 			  // do nothing
 			}
 			case None => {
-			  
+			  val blkDeps =
+			    vldtr.haveBlockDependencies( cmgtS, blk )
+			  if ( blkDeps ) {
+			    val blkVld = vldtr.valid( blk )
+			    if ( blkVld ) {
+			      val blkStat = 
+				BlockStatus( blk, Some( true ), Some( true ), new Date() )
+			      val nBlkHMap : BlockHashMapT[Address,Data,Hash,Signature] =
+				(
+				  cmgtS.blockHashMap
+				  + ( blkHash -> blkStat )
+				).asInstanceOf[BlockHashMapT[Address,Data,Hash,Signature]]
+			      val nCmgtS =
+				ConsensusManagerState[Address,Data,Hash,Signature](
+				  cmgtS, 
+				  nBlkHMap
+				)
+			      sessionMap += ( sid -> ( vldtr, nCmgtS ) );
+			      ()
+			    }
+			    else {
+			      // package as evidence, publish, evict validator
+			    }
+			  }
+			  else {
+			    // wait, or ask other validators for dependencies, or timeout
+			  }
 			}
 		      }
 		    }

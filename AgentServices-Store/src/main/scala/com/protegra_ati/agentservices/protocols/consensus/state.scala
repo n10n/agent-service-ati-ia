@@ -17,7 +17,7 @@ trait AppStateMapT[Address,Data,Hash,Signature,AppState]
 trait ConsensusManagerStateMapT[PrimHash,Address,Data,Hash,Signature]
  extends MapProxy[PrimHash,ConsensusManagerStateT[Address,Data,Hash,Signature]] 
 trait BlockHashMapT[Address,Data,Hash,Signature]
- extends MapProxy[Hash,BlockT[Address,Data,Hash,Signature]] 
+ extends MapProxy[Hash,BlockStatusT[Address,Data,Hash,Signature]] 
 
 trait ConsensusManagerStateT[Address,Data,Hash,Signature] {
   def ghostTable : GhostTableT[Address,Data,Hash,Signature]
@@ -95,7 +95,7 @@ object ConsensusManagerState {
     )
   }
   def apply[Address,Data,Hash,Signature](
-    oldState : ConsensusManagerState[Address,Data,Hash,Signature],
+    oldState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     ghostTable : GhostTableT[Address,Data,Hash,Signature]
   ) : ConsensusManagerState[Address,Data,Hash,Signature] = {
     new ConsensusManagerState[Address,Data,Hash,Signature](
@@ -117,7 +117,7 @@ object ConsensusManagerState {
     )
   }
   def apply[Address,Data,Hash,Signature](
-    oldState : ConsensusManagerState[Address,Data,Hash,Signature],
+    oldState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     history : GhostTableT[Address,Data,Hash,Signature] => Seq[TxnT[Address,Data,Hash,Signature]]
   ) : ConsensusManagerState[Address,Data,Hash,Signature] = {
     new ConsensusManagerState[Address,Data,Hash,Signature](
@@ -139,7 +139,7 @@ object ConsensusManagerState {
     )
   }
   def apply[Address,Data,Hash,Signature](
-    oldState : ConsensusManagerState[Address,Data,Hash,Signature],
+    oldState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     bondedValidators : Map[Address, ( Int, Int )]
   ) : ConsensusManagerState[Address,Data,Hash,Signature] = {
     new ConsensusManagerState[Address,Data,Hash,Signature](
@@ -161,7 +161,7 @@ object ConsensusManagerState {
     )
   }
   def apply[Address,Data,Hash,Signature](
-    oldState : ConsensusManagerState[Address,Data,Hash,Signature],
+    oldState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     blockHashMap : BlockHashMapT[Address,Data,Hash,Signature]
   ) : ConsensusManagerState[Address,Data,Hash,Signature] = {
     new ConsensusManagerState[Address,Data,Hash,Signature](
@@ -183,7 +183,7 @@ object ConsensusManagerState {
     )
   }
   def apply[Address,Data,Hash,Signature](
-    oldState : ConsensusManagerState[Address,Data,Hash,Signature],
+    oldState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     lastStoredHeight : Int // BigInt?
   ) : ConsensusManagerState[Address,Data,Hash,Signature] = {
     new ConsensusManagerState[Address,Data,Hash,Signature](
