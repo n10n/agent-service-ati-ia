@@ -21,9 +21,21 @@ import com.biosimilarity.lift.lib._
 import scala.util.continuations._
 import java.util.UUID
 
-trait ValidatorT extends ProtocolBehaviorT with Serializable {
+trait ValidatorBehaviorT[Address,Data,Hash,Signature,AppState,Timer] extends ProtocolBehaviorT
+with SignatureOpsT[Address,Data,Tuple2[Hash,Hash],Signature] with Serializable {
   import com.biosimilarity.evaluator.distribution.utilities.DieselValueTrampoline._
   import com.protegra_ati.agentservices.store.extensions.StringExtensions._
+
+  def validator[Session,Address,Data,Hash,Signature,AppState,Timer](
+    sessionId : Session
+  ) : ValidatorT[Address,Data,Hash,Tuple2[Hash,Hash],Signature,AppState,Timer]
+    = sessionMap( sessionId )._1
+  def cmgtState[Session,Address,Data,Hash,Signature](
+    sessionId : Session
+  ) : ConsensusManagerStateT[Address,Data,Hash,Signature] = 
+    sessionMap( sessionId )._2
+
+  def sessionMap[Session,Address,Data,Hash,Signature,AppState,Timer] : Map[Session,(ValidatorT[Address,Data,Hash,Tuple2[Hash,Hash],Signature,AppState,Timer],ConsensusManagerStateT[Address,Data,Hash,Signature])] 
 
   def run(
     node : Being.AgentKVDBNode[PersistedKVDBNodeRequest, PersistedKVDBNodeResponse],
@@ -78,10 +90,24 @@ trait ValidatorT extends ProtocolBehaviorT with Serializable {
 
 	reset {
 	  for( eValidationTxn <- node.subscribe( validatorCnxnRd )( ConsensusMessage.toLabel ) ){
-	    rsrc2V[ConsensusMessage]( eValidationTxn ) match {
+	    rsrc2V[ConsensusMessage[Address,Data,Hash,Signature]]( eValidationTxn ) match {
 	      case Left( vTxn ) => {
 		vTxn match {
-		  case BlockMsg( _, _, _ ) => {
+		  case BlockMsg( sid, _, blk : BlockT[Address,Data,Hash,Signature] ) => {
+		    val vldtr = validator[String,Address,Data,Hash,Signature,AppState,Timer]( sid )
+		    val cmgt = cmgtState( sid )
+		    if (
+		      isValidSignature[Address](
+			vldtr.hash[UnsignedBlockT[Address,Data,Hash,Signature]](
+			  blk.unsignedBlock
+			),
+			blk.signature,
+			blk.proposer
+		      )
+		    ) {
+		    }
+		    else {
+		    }
 		  }
 		  case BondMsg( _, _, _ ) => {
 		  }
@@ -105,7 +131,7 @@ trait ValidatorT extends ProtocolBehaviorT with Serializable {
 	
 	reset {
 	  for( eClientTxn <- node.subscribe( clientCnxnRd )( ConsensusMessage.toLabel ) ){
-	    rsrc2V[ConsensusMessage]( eClientTxn ) match {
+	    rsrc2V[ConsensusMessage[Address,Data,Hash,Signature]]( eClientTxn ) match {
 	      case Left( vTxn ) => {
 		vTxn match {		  
 		  case BondMsg( _, _, _ ) => {

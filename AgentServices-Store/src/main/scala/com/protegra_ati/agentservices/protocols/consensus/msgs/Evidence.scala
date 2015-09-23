@@ -18,7 +18,9 @@ case class EvidenceMsg[Address,Data,Hash,Signature](
   override val sessionId : String,
   override val correlationId : String,
   val evidence : EvidenceT[Address,Data,Hash,Signature]
-) extends ConsensusMessage( sessionId, correlationId ) {
+) extends ConsensusMessage[Address,Data,Hash,Signature](
+  sessionId, correlationId
+) {
   override def toLabel : CnxnCtxtLabel[String,String,String] = {
     EvidenceMsg.toLabel( sessionId )
   }

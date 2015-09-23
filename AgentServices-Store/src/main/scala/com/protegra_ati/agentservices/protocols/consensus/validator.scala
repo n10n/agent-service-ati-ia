@@ -81,7 +81,7 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
   def consensusManagerStateMap : ConsensusManagerStateMapT[PrimHash,Address,Data,Hash,Signature]
   def appStateMap : AppStateMapT[Address,Data,PrimHash,Signature,AppState]
   def timer : Timer
-  def blockValidityRecord : Map[Hash,Boolean]
+  def blockValidityRecord : Map[Hash,Boolean] 
   def winner(
     blkMap : Map[BlockT[Address,Data,Hash,Signature],Seq[Bet[Address,Hash]]]
   ) : Option[Block[Address,Data,Hash,Signature]]
@@ -307,7 +307,7 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
       txn match {
         case Ghost( _, cd, _ ) => {
           cd match {
-            case blk@Block( h, _, _, _, _, _, _, _, _ ) => {
+            case blk@Block( h, _, _, _, _, _, _, _, _, _ ) => {
               //throw new Exception( "tbd" )
               ( blockValidityRecord.get( hash( blk ) ), ( h < height ) ) match {
                 case ( Some( true ), true ) => {

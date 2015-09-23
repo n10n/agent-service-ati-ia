@@ -32,7 +32,7 @@ case class Bet[Address,Hash](
 ) extends BetT[Address,Hash]
 
 trait ConsensusDataT[Address,Data,Hash,Signature]
-trait BlockT[Address,Data,Hash,Signature] extends ConsensusDataT[Address,Data,Hash,Signature] {
+trait UnsignedBlockT[Address,Data,Hash,Signature] extends ConsensusDataT[Address,Data,Hash,Signature] {
   def height : Int
   def timeStamp : Date
   def ghostEntries : Seq[EntryT[Address,Data,Hash,Signature]]
@@ -41,6 +41,10 @@ trait BlockT[Address,Data,Hash,Signature] extends ConsensusDataT[Address,Data,Ha
   def bondUnbond : Seq[BondStatusT[Address,Data,Hash,Signature] with EntryT[Address,Data,Hash,Signature]]
   def reorgEntries : ReorgT[Address,Data,Hash,Signature]
   def txns : Seq[TxnT[Address,Data,Hash,Signature]]
+  def proposer : Address
+}
+trait BlockT[Address,Data,Hash,Signature] extends UnsignedBlockT[Address,Data,Hash,Signature] {
+  def unsignedBlock : UnsignedBlockT[Address,Data,Hash,Signature]
   def signature : Signature
 }
 
@@ -68,7 +72,7 @@ case class Evidence[Address,Data,Hash,Signature](
   override val validations : List[ValidationT[Address,Data,Hash,Signature]]
 ) extends EvidenceT[Address,Data,Hash,Signature]
 
-case class Block[Address,Data,Hash,Signature](
+case class UnsignedBlock[Address,Data,Hash,Signature](
   override val height : Int,
   override val timeStamp : Date,
   override val ghostEntries : Seq[EntryT[Address,Data,Hash,Signature]],
@@ -77,8 +81,82 @@ case class Block[Address,Data,Hash,Signature](
   override val bondUnbond : Seq[BondStatusT[Address,Data,Hash,Signature] with EntryT[Address,Data,Hash,Signature]],
   override val reorgEntries : ReorgT[Address,Data,Hash,Signature],
   override val txns : Seq[TxnT[Address,Data,Hash,Signature]],
+  override val proposer : Address
+) extends UnsignedBlockT[Address,Data,Hash,Signature]
+
+class Block[Address,Data,Hash,Signature](
+  override val unsignedBlock : UnsignedBlockT[Address,Data,Hash,Signature],
   override val signature : Signature
-) extends BlockT[Address,Data,Hash,Signature]
+) extends BlockT[Address,Data,Hash,Signature] {
+  override def height : Int = unsignedBlock.height
+  override def timeStamp : Date = unsignedBlock.timeStamp
+  override def ghostEntries : Seq[EntryT[Address,Data,Hash,Signature]]
+  =
+    unsignedBlock.ghostEntries
+  override def feeDistribution : Option[FeeDistributionT[Address,Data,Hash,Signature]] = unsignedBlock.feeDistribution
+  override def pruning : Option[PruneGhostTableT[Address,Data,Hash,Signature]] = unsignedBlock.pruning
+  override def bondUnbond : Seq[BondStatusT[Address,Data,Hash,Signature] with
+  EntryT[Address,Data,Hash,Signature]] = unsignedBlock.bondUnbond
+  override def reorgEntries : ReorgT[Address,Data,Hash,Signature] =
+    unsignedBlock.reorgEntries
+  override def txns : Seq[TxnT[Address,Data,Hash,Signature]] = 
+    unsignedBlock.txns
+  override def proposer : Address = unsignedBlock.proposer
+}
+
+object Block {
+  def apply[Address,Data,Hash,Signature](
+    height : Int,
+    timeStamp : Date,
+    ghostEntries : Seq[EntryT[Address,Data,Hash,Signature]],
+    feeDistribution : Option[FeeDistributionT[Address,Data,Hash,Signature]],
+    pruning : Option[PruneGhostTableT[Address,Data,Hash,Signature]],
+    bondUnbond : Seq[BondStatusT[Address,Data,Hash,Signature] with EntryT[Address,Data,Hash,Signature]],
+    reorgEntries : ReorgT[Address,Data,Hash,Signature],
+    txns : Seq[TxnT[Address,Data,Hash,Signature]],
+    proposer : Address,
+    signature : Signature
+  ) : Block[Address,Data,Hash,Signature] =
+    new Block(
+      new UnsignedBlock( 
+	height,
+	timeStamp,
+	ghostEntries,
+	feeDistribution,
+	pruning,
+	bondUnbond,
+	reorgEntries,
+	txns,
+	proposer
+      ),
+      signature
+    )
+  def unapply[Address,Data,Hash,Signature](
+    block : Block[Address,Data,Hash,Signature] 
+  ) : Option[
+    ( Int, Date, Seq[EntryT[Address,Data,Hash,Signature]],
+      Option[FeeDistributionT[Address,Data,Hash,Signature]],
+      Option[PruneGhostTableT[Address,Data,Hash,Signature]],
+      Seq[BondStatusT[Address,Data,Hash,Signature] with EntryT[Address,Data,Hash,Signature]],
+      ReorgT[Address,Data,Hash,Signature],
+    Seq[TxnT[Address,Data,Hash,Signature]], Address, Signature )
+  ] = {
+    Some(
+      (
+	block.unsignedBlock.height,
+	block.unsignedBlock.timeStamp,
+	block.unsignedBlock.ghostEntries,
+	block.unsignedBlock.feeDistribution,
+	block.unsignedBlock.pruning,
+	block.unsignedBlock.bondUnbond,
+	block.unsignedBlock.reorgEntries,
+	block.unsignedBlock.txns,
+	block.unsignedBlock.proposer,
+	block.signature
+      )
+    )
+  }
+}
 
 trait EntryT[Address,Data,Hash,Signature] {
   def prev : Hash
@@ -205,3 +283,10 @@ case class PruneGhostTable[Address,Data,Hash,Signature](
 
 trait GhostTableT[Address,Data,Hash,Signature]
 extends MapProxy[Int,Map[BlockT[Address,Data,Hash,Signature],Seq[Bet[Address,Hash]]]]
+
+trait SignatureOpsT[Address,Data,Hash,Signature] {
+  def isValidSignature[Account](
+    msgHash : Hash, sig : Signature, key : Account
+  ) : Boolean
+  
+}

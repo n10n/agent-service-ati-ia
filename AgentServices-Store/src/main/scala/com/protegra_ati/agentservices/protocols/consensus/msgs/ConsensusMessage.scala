@@ -16,7 +16,7 @@ import com.biosimilarity.evaluator.distribution.PortableAgentCnxn
 import com.biosimilarity.lift.model.store.CnxnCtxtLabel
 import com.protegra_ati.agentservices.store.extensions.StringExtensions._
 
-abstract class ConsensusMessage(
+abstract class ConsensusMessage[Address,Data,Hash,Signature](
   override val sessionId : String,
   override val correlationId : String
 ) extends ProtocolMessage with SessionMsgStr
