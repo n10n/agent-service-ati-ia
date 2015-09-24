@@ -215,6 +215,15 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
     cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     revenue : Int 
   ) : ConsensusManagerStateT[Address,Data,Hash,Signature]
+  def calculatePayOutTable(
+    cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
+    initTable : GhostTableT[Address,Data,Hash,Signature]
+  ) : GhostTableT[Address,Data,Hash,Signature]
+  def mergeTables(
+    cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
+    initTable : GhostTableT[Address,Data,Hash,Signature],
+    payOutTable : GhostTableT[Address,Data,Hash,Signature]
+  ) : GhostTableT[Address,Data,Hash,Signature]
   def consensusManagerStateFn : StateFnT[ConsensusManagerStateT[Address,Data,Hash,Signature],Address,Data,Hash,Signature]
   = new StateFnT[ConsensusManagerStateT[Address,Data,Hash,Signature],Address,Data,Hash,Signature]
   {
@@ -612,38 +621,46 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
 	case FeeDistribution( prev, post ) => {
 	  val ( cmgtHash, _ ) = prev
 	  if ( hash( state ) == cmgtHash ) {
+	    val payOutTable = 
+	      calculatePayOutTable( state, state.ghostTable )
 	    val lsh = state.lastStoredHeight
-	    ( state /: ( 0 to ( ( height - 1  ) - state.lastStoredHeight ) ) )(
-	      {
-		( acc, e ) => {
-		  val currHeight = lsh + e
-		  state.ghostTable.get( currHeight ) match {
-		    case Some( map ) => {
-		      winner( map ) match {
-			case Some( blk ) => {
-			  val blkRevenues =
-			    acc.revenues.get( currHeight )
-			  ( isBlockFinal( acc, currHeight ), blkRevenues ) match {
-			    case ( true, None ) => {
-			      payFeesForBlock( acc, blk, currHeight )
-			    }
-			    case _ => {
-			      acc
+	    val initState : ConsensusManagerStateT[Address,Data,Hash,Signature] =
+	      ConsensusManagerState( state, payOutTable )
+	    val payOutState =
+	      ( initState /: ( 0 to ( ( height - 1  ) - state.lastStoredHeight ) ) )(
+		{
+		  ( acc, e ) => {
+		    val currHeight = lsh + e		  
+		    payOutTable.get( currHeight ) match {
+		      case Some( map ) => {
+			winner( map ) match {
+			  case Some( blk ) => {
+			    val blkRevenues =
+			      acc.revenues.get( currHeight )
+			    ( isBlockFinal( acc, currHeight ), blkRevenues ) match {
+			      case ( true, None ) => {
+				payFeesForBlock( acc, blk, currHeight )
+			      }
+			      case _ => {
+				acc
+			      }
 			    }
 			  }
-			}
-			case None => {
-			  throw new InvalidBlockException( txnNHeight )
+			  case None => {
+			    throw new InvalidBlockException( txnNHeight )
+			  }
 			}
 		      }
-		    }
-		    case None => {
-		      throw new InvalidBlockException( txnNHeight )
+		      case None => {
+			throw new InvalidBlockException( txnNHeight )
+		      }
 		    }
 		  }
 		}
-	      }
-	    )
+	      )
+	    val paidOutGT =
+	      mergeTables( state, state.ghostTable, payOutState.ghostTable )
+	    ConsensusManagerState( state, paidOutGT )
 	  }
 	  else {
 	    throw new InvalidBlockException( txnNHeight )
