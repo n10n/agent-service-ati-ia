@@ -137,6 +137,10 @@ with SignatureOpsT[Address,Data,Hash,Signature] with Serializable {
 			  }
 			  else {
 			    // wait, or ask other validators for dependencies, or timeout
+			    // on receipt of a dependency, say depBlk, we need to
+			    // remember that !valid( depBlk ) counts as evidence
+			    // against the validator that sent
+			    // the depending block
 			  }
 			}
 		      }
