@@ -129,6 +129,102 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
     ( ( committedBonds / totalBonds ) >= cmgtState.finalityThreshold )
   }
 
+  def blockDependencies(
+    blk : BlockT[Address,Data,Hash,Signature],
+    height : Int
+  ) : Seq[BlockT[Address,Data,Hash,Signature]] = {
+    ( List[BlockT[Address,Data,Hash,Signature]]() /: blk.ghostEntries )(
+      {
+	( acc, e ) => {
+	  e match {
+	    case Ghost( _, dep@Block( h,_,_,_,_,_,_,_,_,_,_ ), _ ) => {
+	      if ( h > height ) {
+		acc ++ List( dep )
+	      }
+	      else {
+		acc
+	      }
+	    }
+	    case _ => acc
+	  }
+	}
+      }
+    )
+  }
+
+//   def blockValidations(
+//     blk : BlockT[Address,Data,Hash,Signature]
+//   ) : Seq[ValidationT[Address,Data,Hash,Signature]] = {
+//     ( List[BlockT[Address,Data,Hash,Signature]]() /: blk.ghostEntries )(
+//       {
+// 	( acc, e ) => {
+// 	  e match {
+// 	    case Ghost( _, v@Validation( _,_ ), _ ) => acc ++ List( v )
+// 	    case _ => acc
+// 	  }
+// 	}
+//       }
+//     )
+//   }
+
+  def blockWageredBlocks(
+    cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
+    gTbl : GhostTableT[Address,Data,Hash,Signature],
+    blk : BlockT[Address,Data,Hash,Signature],
+    height : Int
+  ) : GhostTableT[Address,Data,Hash,Signature] = {
+    ( gTbl /: blk.ghostEntries )(
+      {
+	( acc, e ) => {
+	  e match {
+	    case Ghost( _, v@Validation( bets,_ ), _ ) => {	      
+	      ( acc /: bets )(
+		{ 
+		  ( acc, bet ) => {
+		    bet match {
+		      case bet@Bet( _, h, blkH, _, _, _ ) => {
+			cmgtState.blockHashMap( blkH ) match {
+			  case BlockStatus( b, Some( true ), Some( true ), _ ) => {
+			    if ( b.height > height ) {
+			      gTbl.get( h ) match {
+				case Some( bmap ) => {
+				  val nBets = bmap.getOrElse( b, Nil )
+				  (
+				    gTbl
+				    +
+				    ( h -> ( bmap + ( b -> ( nBets ++ List( bet ) ) ) ) )
+				  ).asInstanceOf[GhostTableT[Address,Data,Hash,Signature]]
+				}
+				case None => {
+				  val bmap =
+				    new HashMap[BlockT[Address,Data,Hash,Signature],Seq[BetT[Address,Hash]]]()
+				  
+				  (
+				    gTbl
+				    +
+				    ( h -> ( bmap + ( b -> List( bet ) ) ) )
+				  ).asInstanceOf[GhostTableT[Address,Data,Hash,Signature]]
+				}
+			      }
+			    }
+			    else acc
+			  }
+			  case _ => acc
+			}
+		      }
+		      case _ => acc
+		    }
+		  }
+		}
+	      )
+	    }
+	    case _ => acc
+	  }
+	}
+      }
+    )
+  }
+
   def haveBlockDependencies( 
     cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     blk : BlockT[Address,Data,Hash,Signature]
@@ -215,10 +311,129 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
     cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     revenue : Int 
   ) : ConsensusManagerStateT[Address,Data,Hash,Signature]
+  def winnersToLSH(
+    cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
+    initTable : GhostTableT[Address,Data,Hash,Signature],
+    initHeight : Int
+  ) : Map[Int,BlockT[Address,Data,Hash,Signature]] = {
+    val lsh = cmgtState.lastStoredHeight
+    if ( initHeight > cmgtState.lastStoredHeight ) {
+      val rslt : Map[Int,BlockT[Address,Data,Hash,Signature]] = 
+	new HashMap[Int,BlockT[Address,Data,Hash,Signature]]()
+    (
+      rslt /: ( 0 to ( ( initHeight - 1  ) - cmgtState.lastStoredHeight ) )
+    )(
+      {
+	( acc, e ) => {
+	  val currHeight = lsh + e		  
+	  initTable.get( currHeight ) match {
+	    case Some( map ) => {
+	      winner( map ) match {
+		case Some( blk ) => {
+		  acc + ( currHeight -> blk )
+		}
+		case None => {
+		  throw new InvalidBlockException( currHeight )
+		}
+	      }
+	    }
+	    case None => {
+	      throw new InvalidBlockException( currHeight )
+	    }
+	  }
+	}
+      }
+    )
+    }
+    else {
+      throw new InvalidBlockException(
+	(
+	  "initHeight (" + initHeight
+	  + ") <= last stored height (" + cmgtState.lastStoredHeight + ")"
+	)
+      )
+    }
+  }
   def calculatePayOutTable(
     cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
-    initTable : GhostTableT[Address,Data,Hash,Signature]
-  ) : GhostTableT[Address,Data,Hash,Signature]
+    initTable : GhostTableT[Address,Data,Hash,Signature],
+    height : Int
+  ) : GhostTableT[Address,Data,Hash,Signature] = {
+    def addDependencies(
+      gTbl : GhostTableT[Address,Data,Hash,Signature],
+      fgTbl : GhostTableT[Address,Data,Hash,Signature],
+      blk : BlockT[Address,Data,Hash,Signature] 
+    ) : GhostTableT[Address,Data,Hash,Signature] = {
+      val dependencies = blockDependencies( blk, cmgtState.lastStoredHeight )
+      val nfgTbl =
+      ( blockWageredBlocks( cmgtState, fgTbl, blk, cmgtState.lastStoredHeight ) /: dependencies )(
+	{ ( acc, e ) => {
+	  val eMap =
+	    gTbl.getOrElse( e.height, new HashMap[BlockT[Address,Data,Hash,Signature],Seq[Bet[Address,Hash]]]() )
+	  val nacc =
+	    ( acc + ( e.height -> eMap ) ).asInstanceOf[GhostTableT[Address,Data,Hash,Signature]]
+	  addDependencies( gTbl, nacc, e )
+	} }
+      )
+
+      blk.previousBlockHash match {
+	case Some( bHash ) => {
+	  cmgtState.blockHashMap.get( bHash ) match {
+	    case Some( BlockStatus( dBlk, Some( true ), Some( true ), _ ) ) => {
+	      if ( dBlk.height > cmgtState.lastStoredHeight ) {
+		gTbl.get( dBlk.height ) match {
+		  case Some( map ) => {
+		    val nnfgTbl =
+		      ( nfgTbl + ( dBlk.height -> map ) ).asInstanceOf[GhostTableT[Address,Data,Hash,Signature]]
+		    addDependencies( gTbl, nnfgTbl, dBlk )
+		  }
+		}
+	      }
+	      else { nfgTbl }
+	    }
+	    case _ => {
+	      throw new InvalidBlockException( blk )
+	    }
+	  }
+	}
+	case None => {
+	  throw new InvalidBlockException( blk )
+	}
+      }      
+    }
+    
+    val seed : GhostTableT[Address,Data,Hash,Signature] =
+      GhostTable(	  
+	new HashMap[Int,Map[BlockT[Address,Data,Hash,Signature],Seq[Bet[Address,Hash]]]](
+	)
+      )
+
+    (
+      seed /: winnersToLSH( cmgtState, initTable, height )
+    )(
+      {
+	( acc, kv ) => {
+	  val whgt = kv._1
+	  val wblk = kv._2
+	  val bmap = initTable( whgt )
+	  bmap.get( wblk ) match {
+	    case Some( bbets ) => {
+	      val nacc =
+		(
+		  acc
+		  +
+		  ( whgt -> ( bmap + ( wblk -> bbets ) ) )
+		).asInstanceOf[GhostTableT[Address,Data,Hash,Signature]]
+	      addDependencies( initTable, nacc, wblk )
+	    }
+	    case None => {
+	      addDependencies( initTable, acc, wblk )
+	    }
+	  }	  	    
+	}
+      }
+    )
+  }
   def mergeTables(
     cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     initTable : GhostTableT[Address,Data,Hash,Signature],
@@ -622,7 +837,7 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
 	  val ( cmgtHash, _ ) = prev
 	  if ( hash( state ) == cmgtHash ) {
 	    val payOutTable = 
-	      calculatePayOutTable( state, state.ghostTable )
+	      calculatePayOutTable( state, state.ghostTable, height )
 	    val lsh = state.lastStoredHeight
 	    val initState : ConsensusManagerStateT[Address,Data,Hash,Signature] =
 	      ConsensusManagerState( state, payOutTable )
