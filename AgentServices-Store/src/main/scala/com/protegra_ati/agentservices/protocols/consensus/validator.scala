@@ -438,7 +438,15 @@ trait ValidatorT[Address,Data,PrimHash,Hash <: Tuple2[PrimHash,PrimHash],Signatu
     cmgtState : ConsensusManagerStateT[Address,Data,Hash,Signature],
     initTable : GhostTableT[Address,Data,Hash,Signature],
     payOutTable : GhostTableT[Address,Data,Hash,Signature]
-  ) : GhostTableT[Address,Data,Hash,Signature]
+  ) : GhostTableT[Address,Data,Hash,Signature] = {
+    ( initTable /: payOutTable )( 
+      {
+        ( acc, e ) => {
+          ( acc + e ).asInstanceOf[GhostTableT[Address,Data,Hash,Signature]]
+        }
+      }
+    )
+  }
   def consensusManagerStateFn : StateFnT[ConsensusManagerStateT[Address,Data,Hash,Signature],Address,Data,Hash,Signature]
   = new StateFnT[ConsensusManagerStateT[Address,Data,Hash,Signature],Address,Data,Hash,Signature]
   {
