@@ -6,8 +6,8 @@
   Description:
   ------------------------------------------------------------------------ */
 
-  defproc InitializeNetwork( n, ask ) = 
-    n?( k, s ).(
+  defproc InitializeNetwork( vlist, ask, fcheck ) = 
+    vlist?( k, s ).(
       (new go in
 	(new stop in (
 	  ask!(stop,go)
@@ -16,23 +16,39 @@
 	      (new kp in
 		(new sp in
 		  (new v in
-		    (s!(v,stake) | Network( n, k, s, kp, sp ) ) ) ) ) );
-	    go?().(
+		    (new betList in
+		      (new updateBet in
+			(new weightedBet in
+			  (new rslt in
+			    (s!(v,stake,betList,updateBet,weightedBet,rslt)
+			    | Validator(v, updateBet, weightedBet, vlist, betList, rslt)
+			    | WeightedAverage(fcheck, updateBet, vsrc, vlist, betList, k, s)
+			    | InitializeBetList( vlist, s, k )
+			    | Network( vlist, k, s, kp, sp ) ) ) ) ) ) ) ) ) );
+	    go?(stake).(
 	      (new v in
-		(k!(v,stake)
-		| InitializeNetwork( n, ask ) ) ) )
+		(new betList in
+		  (new updateBet in
+		    (new weightedBet in
+		      (new rslt in
+			(k!(v,stake,betList,updateBet,weightedBet,rslt)
+			| Validator(v, updateBet, weightedBet, vlist, betList, rslt)
+			| WeightedAverage(fcheck, updateBet, vsrc, vlist, betList, k, s)
+			| InitializeBetList( vlist, s, k )
+			| InitializeNetwork( vlist, ask, fcheck )
+			) ) ) ) ) ) )
 	  } 
 	) ) ) )
-and Network( n, k, s, kp, sp ) = 
-    n?( kpp, spp ).
+and Network( vlist, k, s, kp, sp ) = 
+    vlist?( kpp, spp ).
       select{
-	s?(x).(
-	  spp!(x)
-	| sp!(x)
-	| Network( n, kp, sp, k, s ) );
-	k?( x ).(
-	  kpp!( x )
-	| kp!( x )
-	| Network( n, k, s, kp, sp )
+	s?(v,stake,betList,updateBet,weightedBet,rslt).(
+	  spp!(v,stake,betList,updateBet,weightedBet,rslt)
+	| sp!(v,stake,betList,updateBet,weightedBet,rslt)
+	| Network( vlist, kp, sp, k, s ) );
+	k?(v,stake,betList,updateBet,weightedBet,rslt).(
+	  kpp!(v,stake,betList,updateBet,weightedBet,rslt)
+	| kp!(v,stake,betList,updateBet,weightedBet,rslt)
+	| Network( vlist, k, s, kp, sp )
 	)
       };

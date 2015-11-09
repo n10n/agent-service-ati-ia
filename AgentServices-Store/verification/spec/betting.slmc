@@ -11,32 +11,34 @@
       ( new k in
 	( new s in
 	  updateBet!(bet,vsrc,k,s)
-	  | select{
+	  | (new nxtBet in (
+	      select {
 	      s?(finalBet).(
 		rslt!(finalBet)
+	      | nxtBet!(finalBet)
 	      | Validator(vchan, updateBet, weightedBet, vlist, betList, rslt)
 	      );
-	      k?(newBet).(
-		new nxtBet in (
+	      k?(newBet).(		
 		  nxtBet!(newBet)
 		| ValidatorLoop(
 		    vchan, updateBet, weightedBet, vlist, betList, nxtBet, rslt
 		  )
 		)
+	      }
 	    )
-	    }
-    ) ) )
+    ) ) ) )
 and ValidatorLoop(vsrc, updateBet, weightedBet, vlist, betList, nxtBet, rslt) =
     ( new k in
       ( new s in
         vlist!( k, s ).(
           select {
-	    s?(vtrgt,stake).(
-	      vtrgt!(vsrc,bet)
-	    | nxtBet?(bet)
-	    | Validator(vsrc, updateBet, weightedBet, vlist, betList, rslt)
+	    s?(vtrgt,stake,betList,updateBet,weightedBet,rslt).(	      
+	      nxtBet?(bet).(
+		vtrgt!(vsrc,bet)
+	      | Validator(vsrc, updateBet, weightedBet, vlist, betList, rslt)
+	      )
 	    );
-            k?(vtrgt,stake).(
+            k?(vtrgt,stake,betList,updateBet,weightedBet,rslt).(
 	      nxtBet?(bet).(
 		vtrgt!(vsrc,bet)
 	      | nxtBet!(bet)
