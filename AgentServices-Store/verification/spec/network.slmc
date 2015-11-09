@@ -12,14 +12,14 @@
 	(new stop in (
 	  ask!(stop,go)
 	| select {
-	    stop?().(
+	    stop?(stake).(
 	      (new kp in
 		(new sp in
 		  (new v in
-		    (s!(v) | Network( n, k, s, kp, sp ) ) ) ) ) );
+		    (s!(v,stake) | Network( n, k, s, kp, sp ) ) ) ) ) );
 	    go?().(
 	      (new v in
-		(k!( v )
+		(k!(v,stake)
 		| InitializeNetwork( n, ask ) ) ) )
 	  } 
 	) ) ) )

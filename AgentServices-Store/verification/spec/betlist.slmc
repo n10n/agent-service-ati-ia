@@ -1,0 +1,41 @@
+/* -*- mode: Tuareg;-*- 
+  Filename:    betlist.slmc
+  Authors:     luciusmeredith                                                    
+  Creation:    Sun Nov  8 17:58:28 2015
+  Copyright:   Not supplied
+  Description: 
+  ------------------------------------------------------------------------ */
+
+  defproc InitializeBetList( vlist, s, k ) = 
+    ( new kp in
+      ( new sp in
+        vlist!( kp, sp ).(
+          InitBetListLoop( s, k, sp, kp )
+	) ) )
+and InitBetListLoop( s, k, sp, kp ) =
+    select {
+      sp?(vtrgt,stake).(
+	s!(vtrgt,null,stake)
+      );
+      kp?(vtrgt,stake).(
+	k!(vtrgt,null,stake)
+      | InitBetListLoop( s, k, sp, kp )
+      )
+    }
+and BetList( betList, s, k ) = 
+    betList?( kpp, spp ).
+      ( new kp in
+	( new sp in
+	  select{
+	    s?(x).(
+	      spp!(x)
+	    | sp!(x)
+	    | BetList( betList, sp, kp ) );
+	    k?( x ).(
+	      kpp!( x )
+	    | kp!( x )
+	    | BetList( betList, s, k )
+	    )
+	  } ) );
+
+

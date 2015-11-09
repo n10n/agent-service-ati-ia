@@ -31,12 +31,12 @@ and ValidatorLoop(vsrc, updateBet, weightedBet, vlist, betList, nxtBet, rslt) =
       ( new s in
         vlist!( k, s ).(
           select {
-	    s?(vtrgt).(
+	    s?(vtrgt,stake).(
 	      vtrgt!(vsrc,bet)
 	    | nxtBet?(bet)
 	    | Validator(vsrc, updateBet, weightedBet, vlist, betList, rslt)
 	    );
-            k?(vtrgt).(
+            k?(vtrgt,stake).(
 	      nxtBet?(bet).(
 		vtrgt!(vsrc,bet)
 	      | nxtBet!(bet)
