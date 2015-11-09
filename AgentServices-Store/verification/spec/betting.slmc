@@ -14,7 +14,7 @@
 	  | select{
 	      s?(finalBet).(
 		rslt!(finalBet)
-	      | Validator(vchan, updateBet, weightedBet, vlist, betList, n, rslt)
+	      | Validator(vchan, updateBet, weightedBet, vlist, betList, rslt)
 	      );
 	      k?(newBet).(
 		new nxtBet in (
