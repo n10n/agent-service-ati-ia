@@ -1,0 +1,15 @@
+/* -*- mode: Tuareg;-*-
+  Filename:    bonding.slmc
+  Authors:     luciusmeredith                                               
+  Creation:    Sun Nov  8 21:24:18 2015
+  Copyright:   Not supplied
+  Description:
+  ------------------------------------------------------------------------ */
+
+  defproc Bonding( ask ) =
+    ask?(stop,go).(
+      (new stake in (
+	go!(stake)
+      | go!(stake)
+      | go!(stake)
+      ) ) );

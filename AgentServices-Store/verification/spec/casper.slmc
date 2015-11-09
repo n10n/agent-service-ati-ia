@@ -1,0 +1,16 @@
+/* -*- mode: Tuareg;-*- 
+  Filename:    casper.slmc
+  Authors:     luciusmeredith                                               
+  Creation:    Sun Nov  8 20:32:46 2015
+  Copyright:   Not supplied
+  Description: 
+  ------------------------------------------------------------------------ */
+
+  defproc Casper( ask, fcheck ) =
+    (new vlist in (
+      InitializeNetwork( vlist, ask, fcheck )
+    | Bonding( ask )
+    | FinalityChecker( fcheck )
+    ) );
+
+

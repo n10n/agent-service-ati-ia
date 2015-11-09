@@ -22,7 +22,7 @@
 			  (new rslt in
 			    (s!(v,stake,betList,updateBet,weightedBet,rslt)
 			    | Validator(v, updateBet, weightedBet, vlist, betList, rslt)
-			    | WeightedAverage(fcheck, updateBet, vsrc, vlist, betList, k, s)
+			    | WeightedAverage(fcheck, updateBet, vsrc, betList, k, s)
 			    | InitializeBetList( vlist, s, k )
 			    | Network( vlist, k, s, kp, sp ) ) ) ) ) ) ) ) ) );
 	    go?(stake).(
@@ -33,7 +33,7 @@
 		      (new rslt in
 			(k!(v,stake,betList,updateBet,weightedBet,rslt)
 			| Validator(v, updateBet, weightedBet, vlist, betList, rslt)
-			| WeightedAverage(fcheck, updateBet, vsrc, vlist, betList, k, s)
+			| WeightedAverage(fcheck, updateBet, vsrc, betList, k, s)
 			| InitializeBetList( vlist, s, k )
 			| InitializeNetwork( vlist, ask, fcheck )
 			) ) ) ) ) ) )

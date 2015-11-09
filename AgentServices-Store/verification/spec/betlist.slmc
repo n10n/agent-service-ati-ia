@@ -14,10 +14,10 @@
 	) ) )
 and InitBetListLoop( s, k, sp, kp ) =
     select {
-      sp?(vtrgt,stake).(
+      sp?(vtrgt,stake,betList,updateBet,weightedBet,rslt).(
 	s!(vtrgt,null,stake)
       );
-      kp?(vtrgt,stake).(
+      kp?(vtrgt,stake,betList,updateBet,weightedBet,rslt).(
 	k!(vtrgt,null,stake)
       | InitBetListLoop( s, k, sp, kp )
       )

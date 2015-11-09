@@ -1,0 +1,10 @@
+/* -*- mode: Tuareg;-*-
+  Filename:    finality.slmc
+  Authors:     luciusmeredith                                               
+  Creation:    Sun Nov  8 21:28:12 2015
+  Copyright:   Not supplied
+  Description:
+  ------------------------------------------------------------------------ */
+
+  defproc FinalityChecker( fcheck ) =
+    fcheck?(brcrd,y,n).y!();

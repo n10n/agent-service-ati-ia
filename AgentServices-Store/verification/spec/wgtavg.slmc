@@ -8,7 +8,7 @@
 
   deffun h/3;
 
-  defproc WeightedAverage(fcheck, updateBet, vsrc, vlist, betList, k, s) =
+  defproc WeightedAverage(fcheck, updateBet, vsrc, betList, k, s) =
     updateBet?(bet,vsrc,k,s).(
       ( new kp in
 	( new sp in (
