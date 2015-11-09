@@ -1,0 +1,50 @@
+/* -*- mode: Tuareg;-*- 
+  Filename:    betting.slmc
+  Authors:     luciusmeredith                                                     
+  Creation:    Sun Nov  8 11:46:16 2015 
+  Copyright:   Not supplied
+  Description:
+  ------------------------------------------------------------------------ */
+
+  defproc Validator(vchan, updateBet, weightedBet, vlist, betList, rslt) =
+    vchan?(bet,vsrc).(
+      ( new k in
+	( new s in
+	  updateBet!(bet,vsrc,k,s)
+	  | select{
+	      s?(finalBet).(
+		rslt!(finalBet)
+	      | Validator(vchan, updateBet, weightedBet, vlist, betList, n, rslt)
+	      );
+	      k?(newBet).(
+		new nxtBet in (
+		  nxtBet!(newBet)
+		| ValidatorLoop(
+		    vchan, updateBet, weightedBet, vlist, betList, nxtBet, rslt
+		  )
+		)
+	    )
+	    }
+    ) ) )
+and ValidatorLoop(vsrc, updateBet, weightedBet, vlist, betList, nxtBet, rslt) =
+    ( new k in
+      ( new s in
+        vlist!( k, s ).(
+          select {
+	    s?(vtrgt).(
+	      vtrgt!(vsrc,bet)
+	    | nxtBet?(bet)
+	    | Validator(vsrc, updateBet, weightedBet, vlist, betList, rslt)
+	    );
+            k?(vtrgt).(
+	      nxtBet?(bet).(
+		vtrgt!(vsrc,bet)
+	      | nxtBet!(bet)
+	      | ValidatorLoop(
+		  vsrc, updateBet, weightedBet, vlist, betList, nxtBet, rslt
+		)
+	      )
+	    )
+          }
+	) ) );
+ 

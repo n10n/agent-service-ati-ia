@@ -1,0 +1,38 @@
+/* -*- mode: Tuareg;-*- 
+  Filename:    network.slmc
+  Authors:     luciusmeredith                                                     
+  Creation:    Sun Nov  8 11:46:16 2015 
+  Copyright:   Not supplied
+  Description:
+  ------------------------------------------------------------------------ */
+
+  defproc InitializeNetwork( n, ask ) = 
+    n?( k, s ).(
+      (new go in
+	(new stop in (
+	  ask!(stop,go)
+	| select {
+	    stop?().(
+	      (new kp in
+		(new sp in
+		  (new v in
+		    (s!(v) | Network( n, k, s, kp, sp ) ) ) ) ) );
+	    go?().(
+	      (new v in
+		(k!( v )
+		| InitializeNetwork( n, ask ) ) ) )
+	  } 
+	) ) ) )
+and Network( n, k, s, kp, sp ) = 
+    n?( kpp, spp ).
+      select{
+	s?(x).(
+	  spp!(x)
+	| sp!(x)
+	| Network( n, kp, sp, k, s ) );
+	k?( x ).(
+	  kpp!( x )
+	| kp!( x )
+	| Network( n, k, s, kp, sp )
+	)
+      };

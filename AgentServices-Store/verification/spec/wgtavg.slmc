@@ -1,0 +1,35 @@
+/* -*- mode: Tuareg;-*-
+  Filename:    wgtavg.slmc
+  Authors:     luciusmeredith                                                   
+  Creation:    Sun Nov  8 17:33:41 2015
+  Copyright:   Not supplied
+  Description:
+  ------------------------------------------------------------------------ */
+
+  deffun h/3;
+
+  defproc WeightedAverage(fcheck, updateBet, vsrc, vlist, betList, k, s) =
+    updateBet?(bet,vsrc,k,s).(
+      ( new kp in
+	( new sp in (
+	  betList!(kp,sp)
+	| (new rslt in WeightedAverageLoop( fcheck, s, k, kp, sp, rslt ))
+	) ) ) )
+and WeightedAverageLoop( fcheck, s, k, kp, sp, rslt ) =
+    select {
+      sp?(v,bet,stake).(
+	(new y in 
+	  (new n in
+	  let brcrd = h(bet,stake,wgtAvg) in
+	    rslt?(wgtAvg).fcheck!(brcrd,y,n)
+      | select {
+	  y?().s!(brcrd);
+	  n?().k!(brcrd)
+	} ) )
+      );
+      kp?(v,bet,stake).(
+	rslt?(wgtAvg).rslt!(h(bet,stake,wgtAvg))
+      | WeightedAverageLoop( fcheck, s, k, kp, sp, rslt )
+      )
+    };
+
